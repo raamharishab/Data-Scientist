@@ -1,0 +1,230 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include <stdbool.h>
+
+#define SIZE 4
+#define WIN_CONDITION 2048
+
+// The game grid (4x4)
+int grid[SIZE][SIZE];
+
+// Function prototypes
+void initGrid();
+void printGrid();
+void addRandomTile();
+bool slideLeft();
+bool mergeLeft();
+bool moveLeft();
+void rotateGrid();
+void resetGame();
+bool isGameOver();
+bool isWin();
+
+// Main function
+int main() {
+    srand(time(NULL));
+    initGrid();
+    printGrid();
+    
+    char move;
+    
+    while (1) {
+        printf("Enter move (W = Up, A = Left, S = Down, D = Right, Q = Quit): ");
+        scanf(" %c", &move);
+        
+        bool moved = false;
+
+        switch (move) {
+            case 'W': case 'w':
+                rotateGrid();
+                moved = moveLeft();
+                rotateGrid();
+                rotateGrid();
+                rotateGrid();
+                break;
+            case 'A': case 'a':
+                moved = moveLeft();
+                break;
+            case 'S': case 's':
+                rotateGrid();
+                rotateGrid();
+                rotateGrid();
+                moved = moveLeft();
+                rotateGrid();
+                break;
+            case 'D': case 'd':
+                rotateGrid();
+                rotateGrid();
+                moved = moveLeft();
+                rotateGrid();
+                rotateGrid();
+                break;
+            case 'Q': case 'q':
+                printf("You quit the game!\n");
+                return 0;
+            default:
+                printf("Invalid move!\n");
+                continue;
+        }
+
+        if (moved) {
+            addRandomTile();
+            printGrid();
+        }
+
+        if (isWin()) {
+            printf("Congratulations! You reached 2048!\n");
+            break;
+        }
+
+        if (isGameOver()) {
+            printf("Game Over! No moves left.\n");
+            break;
+        }
+    }
+
+    return 0;
+}
+
+// Initialize the game grid with two random tiles
+void initGrid() {
+    for (int i = 0; i < SIZE; i++) {
+        for (int j = 0; j < SIZE; j++) {
+            grid[i][j] = 0;
+        }
+    }
+    addRandomTile();
+    addRandomTile();
+}
+
+// Print the grid
+void printGrid() {
+    system("clear"); // Clears the console (use "cls" for Windows)
+    for (int i = 0; i < SIZE; i++) {
+        for (int j = 0; j < SIZE; j++) {
+            if (grid[i][j] == 0)
+                printf(".\t");
+            else
+                printf("%d\t", grid[i][j]);
+        }
+        printf("\n");
+    }
+}
+
+// Add a random tile (2 or 4) to an empty spot on the grid
+void addRandomTile() {
+    int empty[SIZE * SIZE][2];
+    int emptyCount = 0;
+    
+    for (int i = 0; i < SIZE; i++) {
+        for (int j = 0; j < SIZE; j++) {
+            if (grid[i][j] == 0) {
+                empty[emptyCount][0] = i;
+                empty[emptyCount][1] = j;
+                emptyCount++;
+            }
+        }
+    }
+    
+    if (emptyCount == 0) return;
+
+    int randIndex = rand() % emptyCount;
+    int row = empty[randIndex][0];
+    int col = empty[randIndex][1];
+
+    grid[row][col] = (rand() % 2 == 0) ? 2 : 4;
+}
+
+// Slide tiles left (compress non-zero values)
+bool slideLeft() {
+    bool moved = false;
+    for (int i = 0; i < SIZE; i++) {
+        int newRow[SIZE] = {0};
+        int insertPos = 0;
+
+        // Slide tiles to the left
+        for (int j = 0; j < SIZE; j++) {
+            if (grid[i][j] != 0) {
+                newRow[insertPos++] = grid[i][j];
+            }
+        }
+
+        // Update the grid row
+        for (int j = 0; j < SIZE; j++) {
+            if (grid[i][j] != newRow[j]) {
+                moved = true;
+            }
+            grid[i][j] = newRow[j];
+        }
+    }
+    return moved;
+}
+
+// Merge tiles to the left
+bool mergeLeft() {
+    bool moved = false;
+
+    for (int i = 0; i < SIZE; i++) {
+        for (int j = 0; j < SIZE - 1; j++) {
+            if (grid[i][j] == grid[i][j + 1] && grid[i][j] != 0) {
+                grid[i][j] *= 2;
+                grid[i][j + 1] = 0;
+                moved = true;
+                j++; // Skip next cell
+            }
+        }
+    }
+
+    return moved;
+}
+
+// Move tiles left: slide and merge
+bool moveLeft() {
+    bool moved = slideLeft();
+    moved |= mergeLeft();
+    moved |= slideLeft();
+    return moved;
+}
+
+// Rotate the grid 90 degrees clockwise
+void rotateGrid() {
+    int temp[SIZE][SIZE];
+    
+    for (int i = 0; i < SIZE; i++) {
+        for (int j = 0; j < SIZE; j++) {
+            temp[j][SIZE - 1 - i] = grid[i][j];
+        }
+    }
+
+    for (int i = 0; i < SIZE; i++) {
+        for (int j = 0; j < SIZE; j++) {
+            grid[i][j] = temp[i][j];
+        }
+    }
+}
+
+// Check if the player has won the game (reached 2048)
+bool isWin() {
+    for (int i = 0; i < SIZE; i++) {
+        for (int j = 0; j < SIZE; j++) {
+            if (grid[i][j] == WIN_CONDITION) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+// Check if the game is over (no moves left)
+bool isGameOver() {
+    for (int i = 0; i < SIZE; i++) {
+        for (int j = 0; j < SIZE; j++) {
+            if (grid[i][j] == 0) return false;
+            if (i < SIZE - 1 && grid[i][j] == grid[i + 1][j]) return false;
+            if (j < SIZE - 1 && grid[i][j] == grid[i][j + 1]) return false;
+        }
+    }
+    return true;
+}
+
